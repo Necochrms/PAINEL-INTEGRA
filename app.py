@@ -15,6 +15,13 @@ st.markdown("""
 [data-testid="stSidebar"] hr{border-color:#3b617c}
 h1,h2,h3{color:#103d69;letter-spacing:-.03em}
 h1{font-size:2.05rem!important;margin-bottom:0}
+[data-testid="stSidebar"] [role="radiogroup"] label{padding:5px 9px;border-radius:8px}
+[data-testid="stSidebar"] [role="radiogroup"] label:has(input:checked){background:#09618e}
+[data-testid="stSidebar"] .stSelectbox [data-baseweb="select"]{background:#f4f9fd}
+header[data-testid="stHeader"]{background:transparent}
+.unit-card{box-shadow:0 3px 12px #143d5912}
+.kpi-card{box-shadow:0 3px 14px #17405e12}
+.ind-card{box-shadow:0 2px 10px #143d590d}
 h3{font-size:1.14rem!important}
 [data-testid="stVerticalBlockBorderWrapper"]{background:white;border-radius:13px;border-color:#dce9f4;box-shadow:0 2px 10px #0c45600a}
 [data-testid="stMetric"]{background:white;border:1px solid #e1eaf2;border-radius:12px;padding:12px}
@@ -56,9 +63,13 @@ if "indicator_focus" not in st.session_state: st.session_state.indicator_focus=N
 
 with st.sidebar:
     st.markdown("## 🏥 GESTÃO À VISTA")
+    st.markdown("**Hospital Anchieta Ceilândia**")
+    st.caption("Gestão de resultados com segurança e qualidade")
     st.markdown("**NECOC · Indicadores 2026**")
     st.divider()
-    section=st.radio("NAVEGAÇÃO",["Visão geral","Indicadores comuns","Maternidade","Clínica Cirúrgica","Centro Cirúrgico","CME","Absenteísmo","Quadro dimensionado","Indicadores específicos"],key="nav_section")
+    st.caption("INDICADORES")
+    section=st.radio("NAVEGAÇÃO",["Visão geral","Indicadores comuns","Maternidade","Clínica Cirúrgica","Centro Cirúrgico","CME","Absenteísmo","Quadro dimensionado","Indicadores específicos","Projetos e prazos","Equipamentos e riscos"],key="nav_section")
+    st.caption("GESTÃO DE PESSOAS · ASSISTENCIAL · RELATÓRIOS")
     st.divider()
     chart=st.selectbox("Tipo de gráfico",["Linha","Colunas","Barras horizontais","Área","Dispersão","Tabela"])
     show_labels=st.toggle("Exibir valores mensais",value=True)
@@ -74,7 +85,7 @@ if section=="Visão geral" and st.session_state.unit_focus and st.session_state.
 st.session_state.last_nav=section
 
 st.title("GESTÃO À VISTA – NECOC")
-st.markdown('<div class="hero-sub">CENTRAL DE INTELIGÊNCIA ASSISTENCIAL / INDICADORES SETORIAIS 2026</div>',unsafe_allow_html=True)
+st.markdown('<div class="hero-sub">CENTRAL DE INTELIGÊNCIA ASSISTENCIAL / INDICADORES SETORIAIS 2026 &nbsp; | &nbsp; Fonte: relatórios institucionais &nbsp; | &nbsp; Hospital Anchieta Ceilândia</div>',unsafe_allow_html=True)
 st.markdown('<div class="section-heading">Unidades assistenciais</div>',unsafe_allow_html=True)
 cols=st.columns(4,gap="small")
 for col,unit in zip(cols,UNITS):
@@ -105,7 +116,7 @@ def chart_panel(name,frame,key):
         st.info("Sem série mensal validada para o indicador selecionado.")
         return
     opts=dict(data_frame=frame.sort_values("Ordem"),x="Mês",y="Valor",color="Unidade",color_discrete_map=COLORS,category_orders={"Mês":MONTHS})
-    if chart=="Linha": fig=px.line(**opts,markers=True,text="Valor" if show_labels else None)
+    if chart=="Linha": fig=px.line(**opts,markers=True,text="Valor" if show_labels else None,connectgaps=False)
     elif chart=="Colunas": fig=px.bar(**opts,barmode="group",text="Valor" if show_labels else None)
     elif chart=="Barras horizontais":
         opts.update(x="Valor",y="Mês")
@@ -115,15 +126,22 @@ def chart_panel(name,frame,key):
     else:
         st.dataframe(frame[["Unidade","Mês","Valor"]],hide_index=True,use_container_width=True)
         return
-    fig.update_layout(height=295,margin=dict(l=2,r=5,t=20,b=5),legend_title_text="",legend=dict(orientation="h",y=-.2,x=.02),
+    fig.update_layout(height=330,margin=dict(l=2,r=5,t=22,b=12),legend_title_text="",legend=dict(orientation="h",y=-.24,x=.02),
                       paper_bgcolor="rgba(0,0,0,0)",plot_bgcolor="rgba(0,0,0,0)",font=dict(color="#426782"))
-    fig.update_yaxes(gridcolor="#e6eef5",title_text=None)
+    fig.update_yaxes(gridcolor="#e6eef5",title_text=None,rangemode="tozero")
     fig.update_xaxes(title_text=None)
     if show_labels and chart in ["Linha","Colunas","Barras horizontais","Dispersão"]:
         fig.update_traces(texttemplate="%{text:.2f}",textposition="top center" if chart in ["Linha","Dispersão"] else "outside",cliponaxis=False)
     st.plotly_chart(fig,use_container_width=True,key=key)
+    if name=="Absenteísmo de enfermeiros (%)" and "Clínica Cirúrgica" in selected:
+        clinical=frame[frame["Unidade"]=="Clínica Cirúrgica"].sort_values("Ordem")
+        if clinical.empty:
+            st.caption("Clínica Cirúrgica: sem valores no período selecionado.")
+        elif len(clinical)<8:
+            values=" · ".join(f"{row['Mês']}: {row['Valor']:.2f}%" for _,row in clinical.iterrows())
+            st.caption("🔵 Clínica Cirúrgica — "+values+" | Demais meses aguardando conferência documental.")
 
-st.markdown('<div class="section-heading">Principais indicadores</div>',unsafe_allow_html=True)
+st.markdown('<div class="section-heading">Principais indicadores (comparativo das unidades selecionadas)</div>',unsafe_allow_html=True)
 kpis=[
 ("Absenteísmo – Enfermeiros","Absenteísmo de enfermeiros (%)","#ec1975"),
 ("Absenteísmo – Técnicos","Absenteísmo de técnicos (%)","#009b78"),
@@ -183,7 +201,7 @@ for offset in range(0,len(chosen),2):
                 chart_panel(name,df[df["Indicador"]==name],"trend_"+str(offset)+"_"+name)
 
 st.markdown('<div class="section-heading">Quadro dimensionado e GAP de enfermagem</div>',unsafe_allow_html=True)
-st.caption("Dados quantitativos confirmados: Clínica Cirúrgica, agosto/2026. GAP = quadro atual equivalente − quadro dimensionado.")
+st.caption("Quadro dimensionado: dados quantitativos conferidos da Clínica Cirúrgica em agosto/2026. GAP = quadro atual equivalente − dimensionado. Valores ausentes não são zero.")
 GAP=[
 {"Unidade":"Clínica Cirúrgica","Categoria":"Enfermeiros","Colaboradores":13,"Atual":13.11,"Dimensionado":12.75,"GAP":0.36},
 {"Unidade":"Clínica Cirúrgica","Categoria":"Técnicos","Colaboradores":54,"Atual":54.44,"Dimensionado":55.72,"GAP":-1.27}]
