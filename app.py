@@ -111,11 +111,22 @@ if not selected:
 df=ALL[ALL["Unidade"].isin(selected)&ALL["Ordem"].between(*period)].copy()
 cat=CAT[CAT["Unidade"].isin(selected)].copy()
 
+def occupancy_comparison(data):
+    names={"Taxa de ocupação (%)":"Clínica Cirúrgica",
+           "Taxa de ocupação — gestantes (%)":"Maternidade · Gestantes",
+           "Taxa de ocupação — puérperas (%)":"Maternidade · Puérperas"}
+    rows=data[data["Indicador"].isin(names)].copy()
+    rows["Unidade"]=rows["Indicador"].map(names)
+    rows["Indicador"]="Taxa de ocupação (%)"
+    return rows
+
 def chart_panel(name,frame,key):
+    if name=="Taxa de ocupação (%)":
+        frame=occupancy_comparison(df)
     if frame.empty:
         st.info("Sem série mensal validada para o indicador selecionado.")
         return
-    opts=dict(data_frame=frame.sort_values("Ordem"),x="Mês",y="Valor",color="Unidade",color_discrete_map=COLORS,category_orders={"Mês":MONTHS})
+    opts=dict(data_frame=frame.sort_values("Ordem"),x="Mês",y="Valor",color="Unidade",color_discrete_map={**COLORS,"Maternidade · Gestantes":"#ed2680","Maternidade · Puérperas":"#f6a0c6"},category_orders={"Mês":MONTHS})
     if chart=="Linha": fig=px.line(**opts,markers=True,text="Valor" if show_labels else None)
     elif chart=="Colunas": fig=px.bar(**opts,barmode="group",text="Valor" if show_labels else None)
     elif chart=="Barras horizontais":
@@ -151,7 +162,7 @@ kpis=[
 ("Cirurgias eletivas","Cirurgias eletivas (n)","#008b91")]
 cols=st.columns(5,gap="small")
 for col,(label,indicator,color) in zip(cols,kpis):
-    rows=df[df["Indicador"]==indicator].sort_values("Ordem")
+    rows=(occupancy_comparison(df) if indicator=="Taxa de ocupação (%)" else df[df["Indicador"]==indicator]).sort_values("Ordem")
     if not rows.empty:
         last=rows.iloc[-1]
         suffix="%" if "(%)" in indicator else " dias" if "(dias)" in indicator else ""
@@ -160,7 +171,7 @@ for col,(label,indicator,color) in zip(cols,kpis):
     else: value="—";origin="Sem valor no período"
     with col:
         st.markdown(f'<div class="kpi-card"><div class="kpi-label">{html.escape(label)}</div><div class="kpi-val" style="color:{color}">{value}</div><div class="kpi-sub">{html.escape(origin)}</div></div>',unsafe_allow_html=True)
-st.caption("Cada destaque corresponde ao último registro disponível de uma unidade identificada, não a um consolidado institucional.")
+st.caption("Cada destaque corresponde ao último registro disponível de uma unidade identificada, não a um consolidado institucional. Ocupação da Maternidade é segmentada em gestantes e puérperas; dados até julho/2026.")
 
 st.markdown('<div class="section-heading">Indicadores comuns e específicos</div>',unsafe_allow_html=True)
 tabs=st.tabs(["Indicadores comuns","Indicadores específicos / setoriais","Todos os indicadores"])
@@ -189,7 +200,7 @@ if st.session_state.indicator_focus:
         st.rerun()
 
 st.markdown('<div class="section-heading">Evolução mensal dos indicadores</div>',unsafe_allow_html=True)
-choices=sorted(df["Indicador"].unique())
+choices=sorted(set(df["Indicador"].unique()).union({"Taxa de ocupação (%)"} if df["Indicador"].str.contains("Taxa de ocupação").any() else set()))
 defaults=[x for x in ["Absenteísmo de enfermeiros (%)","Absenteísmo de técnicos (%)"] if x in choices]
 if not defaults: defaults=choices[:2]
 chosen=st.multiselect("Indicadores exibidos nos gráficos",choices,default=defaults)
