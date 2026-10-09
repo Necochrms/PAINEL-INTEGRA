@@ -20,10 +20,30 @@ with st.sidebar:
     st.divider()
     st.caption("Base: relatórios setoriais 2026")
     st.caption("Somente dados agregados • sem identificação pessoal")
+if "selected_page" not in st.session_state: st.session_state.selected_page="Visão executiva"
 st.title(page)
+if page=="Visão executiva":
+    st.subheader("Unidades assistenciais")
+    c1,c2,c3,c4=st.columns(4)
+    for col,unit in zip([c1,c2,c3,c4],["Internação Maternidade","Clínica Cirúrgica","Centro Cirúrgico","CME"]):
+        with col:
+            st.markdown("### "+unit)
+            count=indicators().query("Unidade == @unit")["Indicador"].nunique()
+            st.metric("Indicadores disponíveis",count)
+            if st.button("Abrir painel →",key="open_"+unit,use_container_width=True):
+                st.session_state.selected_page=unit
+                st.rerun()
+if st.session_state.selected_page!="Visão executiva" and page=="Visão executiva":
+    page=st.session_state.selected_page
+    st.title("Painel: "+page)
+    if st.button("← Voltar à visão executiva"):
+        st.session_state.selected_page="Visão executiva"
+        st.rerun()
+elif page!="Visão executiva":
+    st.session_state.selected_page="Visão executiva"
 st.caption("Painel demonstrativo baseado em relatórios setoriais recebidos • 2026")
 df=indicators()
-units=["CME","Centro Cirúrgico"] if page=="Visão executiva" else ([page] if page in ["CME","Centro Cirúrgico"] else [])
+units=list(COVERAGE) if page=="Visão executiva" else ([page] if page in COVERAGE else [])
 if page=="Gestão de pessoas": units=["CME","Centro Cirúrgico"]
 if units:
     selected=st.multiselect("Unidades",units,default=units)
