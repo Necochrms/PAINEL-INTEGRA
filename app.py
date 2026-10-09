@@ -32,8 +32,6 @@ with st.sidebar:
     st.divider()
     st.radio("Área de análise",["Indicadores assistenciais","Gestão de pessoas","Projetos e prazos","Equipamentos e riscos","Integração de processos"],key="view")
     st.divider()
-    st.selectbox("Visualização gráfica",["Linha","Barras","Colunas","Área","Dispersão","Tabela"],key="chart_type")
-    st.slider("Meses de referência",1,8,key="period")
     st.caption("Os valores são agregados e exigem conferência institucional.")
 
 st.markdown("# PAINEL INTEGRA")
