@@ -116,7 +116,7 @@ def chart_panel(name,frame,key):
         st.info("Sem série mensal validada para o indicador selecionado.")
         return
     opts=dict(data_frame=frame.sort_values("Ordem"),x="Mês",y="Valor",color="Unidade",color_discrete_map=COLORS,category_orders={"Mês":MONTHS})
-    if chart=="Linha": fig=px.line(**opts,markers=True,text="Valor" if show_labels else None,connectgaps=False)
+    if chart=="Linha": fig=px.line(**opts,markers=True,text="Valor" if show_labels else None)
     elif chart=="Colunas": fig=px.bar(**opts,barmode="group",text="Valor" if show_labels else None)
     elif chart=="Barras horizontais":
         opts.update(x="Valor",y="Mês")
@@ -129,6 +129,7 @@ def chart_panel(name,frame,key):
     fig.update_layout(height=330,margin=dict(l=2,r=5,t=22,b=12),legend_title_text="",legend=dict(orientation="h",y=-.24,x=.02),
                       paper_bgcolor="rgba(0,0,0,0)",plot_bgcolor="rgba(0,0,0,0)",font=dict(color="#426782"))
     fig.update_yaxes(gridcolor="#e6eef5",title_text=None,rangemode="tozero")
+    if chart=="Linha": fig.update_traces(connectgaps=False)
     fig.update_xaxes(title_text=None)
     if show_labels and chart in ["Linha","Colunas","Barras horizontais","Dispersão"]:
         fig.update_traces(texttemplate="%{text:.2f}",textposition="top center" if chart in ["Linha","Dispersão"] else "outside",cliponaxis=False)
