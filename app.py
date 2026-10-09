@@ -1,10 +1,10 @@
-"""PAINEL INTEGRA — painel executivo hospitalar com dados agregados."""
+"""Gestão à Vista – NECOC — painel executivo hospitalar com dados agregados."""
 import streamlit as st
 import pandas as pd
 import plotly.express as px
 from modules.indicators import indicators, catalog, COVERAGE, MONTHS
 
-st.set_page_config(page_title="PAINEL INTEGRA",page_icon="🏥",layout="wide",initial_sidebar_state="expanded")
+st.set_page_config(page_title="Gestão à Vista – NECOC",page_icon="🏥",layout="wide",initial_sidebar_state="expanded")
 st.markdown("""<style>
 :root{--navy:#12354c;--teal:#087f87}
 .block-container{max-width:1600px;padding-top:1.1rem;padding-bottom:2rem}
@@ -19,17 +19,18 @@ div.stButton>button[kind="primary"]{background:#087f87;border-color:#087f87;colo
 [data-testid="stTabs"] button{font-weight:650}
 </style>""",unsafe_allow_html=True)
 
-UNITS=list(COVERAGE)
-ALL=indicators()
-CAT=catalog()
+UNITS=["Maternidade" if u=="Internação Maternidade" else u for u in COVERAGE]
+ALL=indicators().replace({"Unidade":{"Internação Maternidade":"Maternidade"}})
+CAT=catalog().replace({"Unidade":{"Internação Maternidade":"Maternidade"}})
 if "units" not in st.session_state: st.session_state.units=UNITS.copy()
+else: st.session_state.units=["Maternidade" if x=="Internação Maternidade" else x for x in st.session_state.units]
 if "view" not in st.session_state: st.session_state.view="Indicadores assistenciais"
 if "chart_type" not in st.session_state: st.session_state.chart_type="Linha"
 if "period" not in st.session_state: st.session_state.period=(1,8)
 if "focus_unit" not in st.session_state: st.session_state.focus_unit=None
 
 with st.sidebar:
-    st.markdown("## 🏥 PAINEL INTEGRA")
+    st.markdown("## 🏥 Gestão à Vista – NECOC")
     st.caption("Gestão integrada • Indicadores 2026")
     st.divider()
     st.radio("Área de análise",["Indicadores assistenciais","Gestão de pessoas","Projetos e prazos","Equipamentos e riscos","Integração de processos"],key="view")
@@ -39,7 +40,7 @@ with st.sidebar:
         st.session_state.focus_unit=None
         st.rerun()
 
-st.markdown("# PAINEL INTEGRA")
+st.markdown("# Gestão à Vista – NECOC")
 st.caption("CENTRAL DE INTELIGÊNCIA ASSISTENCIAL  /  INDICADORES SETORIAIS 2026")
 st.markdown("#### Unidades assistenciais")
 cols=st.columns(4,gap="medium")
@@ -68,9 +69,17 @@ if st.session_state.focus_unit and st.session_state.focus_unit in units and len(
     st.markdown("## "+st.session_state.focus_unit+" — painel da unidade")
     current=CAT[CAT["Unidade"]==st.session_state.focus_unit]
     for group,group_df in current.groupby("Grupo",sort=False):
-        with st.expander(group+" • "+str(len(group_df))+" indicadores",expanded=True):
-            st.dataframe(group_df[["Indicador","Classificação","Situação","Meses disponíveis"]],
-                         hide_index=True,use_container_width=True)
+        st.markdown("### "+group)
+        cards=st.columns(3)
+        for idx,(_,item) in enumerate(group_df.iterrows()):
+            with cards[idx%3]:
+                with st.container(border=True):
+                    st.markdown("**"+item["Indicador"]+"**")
+                    st.caption(item["Situação"])
+                    st.caption(str(item["Meses disponíveis"])+" meses cadastrados")
+                    if st.button("Visualizar indicador →",key="indicator_"+str(idx)+"_"+group):
+                        st.session_state["selected_indicator"]=item["Indicador"]
+                        st.rerun()
 elif units:
     st.markdown("## Indicadores comuns e específicos")
     selected_catalog=CAT[CAT["Unidade"].isin(units)]
@@ -78,10 +87,55 @@ elif units:
     specific=selected_catalog[selected_catalog["Classificação"]=="específico"]
     t1,t2=st.tabs(["Indicadores comuns","Indicadores exclusivos / setoriais"])
     with t1:
-        st.caption("Indicadores comparáveis por tema. As definições e denominadores devem ser homologados antes da comparação entre setores.")
-        st.dataframe(common[["Unidade","Indicador","Situação"]],hide_index=True,use_container_width=True)
+        st.caption("Indicadores comuns por tema; comparar somente quando as definições forem equivalentes.")
+        for group,gdf in common.groupby("Grupo",sort=False):
+            st.markdown("#### "+group)
+            cs=st.columns(3)
+            for i,(name,subset) in enumerate(gdf.groupby("Indicador",sort=False)):
+                with cs[i%3]:
+                    with st.container(border=True):
+                        st.markdown("**"+name+"**")
+                        st.caption(" • ".join(subset["Unidade"].tolist()))
+                        st.caption(str((subset["Situação"]=="Série disponível").sum())+" unidade(s) com série")
+                        if st.button("Ver evolução →",key="common_"+name):
+                            st.session_state["selected_indicator"]=name
+                            st.rerun()
     with t2:
-        st.dataframe(specific[["Unidade","Indicador","Situação"]],hide_index=True,use_container_width=True)
+        for unit,gdf in specific.groupby("Unidade",sort=False):
+            st.markdown("#### "+unit)
+            cs=st.columns(3)
+            for i,(_,item) in enumerate(gdf.iterrows()):
+                with cs[i%3]:
+                    with st.container(border=True):
+                        st.markdown("**"+item["Indicador"]+"**")
+                        st.caption(item["Situação"])
+                        if st.button("Ver evolução →",key="specific_"+unit+item["Indicador"]):
+                            st.session_state["selected_indicator"]=item["Indicador"]
+                            st.rerun()
+st.markdown("## Dimensionamento e GAP de enfermagem")
+st.caption("Referência: agosto de 2026, quando disponível. GAP = quadro atual equivalente − quadro dimensionado. Valores decimais de dimensionamento não são contagem de pessoas.")
+GAP_ROWS=[
+ {"Unidade":"Clínica Cirúrgica","Categoria":"Enfermeiros","Colaboradores":13,"Quadro atual equivalente":13.11,"Dimensionado":12.75,"GAP":0.36,"Fonte":"Indicadores SSECI agosto/2026"},
+ {"Unidade":"Clínica Cirúrgica","Categoria":"Técnicos","Colaboradores":54,"Quadro atual equivalente":54.44,"Dimensionado":55.72,"GAP":-1.27,"Fonte":"Indicadores SSECI agosto/2026"},
+]
+gap_df=pd.DataFrame(GAP_ROWS)
+for unit in units:
+    with st.container(border=True):
+        st.markdown("**"+unit+"**")
+        current_gap=gap_df[gap_df["Unidade"]==unit]
+        if current_gap.empty:
+            st.caption("Quadro e GAP numéricos pendentes de conferência nos relatórios desta unidade.")
+        else:
+            gc=st.columns(2)
+            for col,(_,g) in zip(gc,current_gap.iterrows()):
+                with col:
+                    status="Superávit" if g["GAP"]>0 else "Déficit" if g["GAP"]<0 else "Equilíbrio"
+                    st.metric(g["Categoria"]+" — colaboradores",int(g["Colaboradores"]))
+                    st.markdown(f"**{status} • GAP {g['GAP']:+.2f}**")
+                    st.caption(f"Quadro atual equivalente: {g['Quadro atual equivalente']:.2f} | Dimensionado: {g['Dimensionado']:.2f}")
+                    st.caption(g["Fonte"])
+st.divider()
+
 if st.session_state.view in ["Indicadores assistenciais","Gestão de pessoas"]:
     if not units:
         st.info("Selecione uma ou mais unidades nos cards ou no filtro para visualizar os indicadores.")
@@ -104,7 +158,9 @@ if st.session_state.view in ["Indicadores assistenciais","Gestão de pessoas"]:
             d.metric("Meses no filtro",period[1]-period[0]+1)
             st.caption("A quantidade de registros não representa volume de pacientes ou procedimentos.")
             st.markdown("### Indicadores e evolução")
-            chosen=st.multiselect("Selecione um ou vários indicadores",names,default=names[:min(4,len(names))])
+            preferred=st.session_state.pop("selected_indicator",None)
+            default=[preferred] if preferred in names else names[:min(4,len(names))]
+            chosen=st.multiselect("Selecione um ou vários indicadores",names,default=default,key="indicator_selection") if preferred is None else st.multiselect("Selecione um ou vários indicadores",names,default=default,key="indicator_selection_focus")
             if not chosen:
                 st.info("Escolha ao menos um indicador para exibir os gráficos.")
             for name in chosen:
@@ -118,15 +174,16 @@ if st.session_state.view in ["Indicadores assistenciais","Gestão de pessoas"]:
                     opts=dict(data_frame=sub,x="Mês",y="Valor",color="Unidade",
                               category_orders={"Mês":MONTHS},
                               color_discrete_sequence=["#087f87","#174b74","#d58b38","#6b5aa8"])
-                    if chart=="Linha": fig=px.line(**opts,markers=True)
-                    elif chart=="Barras": fig=px.bar(**opts,orientation="v",barmode="group");fig.update_layout(xaxis_title="")
-                    elif chart=="Colunas": fig=px.bar(**opts,barmode="group")
-                    elif chart=="Área": fig=px.area(**opts)
-                    elif chart=="Dispersão": fig=px.scatter(**opts)
+                    if chart=="Linha": fig=px.line(**opts,markers=True,text="Valor")
+                    elif chart=="Barras": fig=px.bar(**opts,orientation="v",barmode="group",text="Valor");fig.update_layout(xaxis_title="")
+                    elif chart=="Colunas": fig=px.bar(**opts,barmode="group",text="Valor")
+                    elif chart=="Área": fig=px.area(**opts,text="Valor")
+                    elif chart=="Dispersão": fig=px.scatter(**opts,text="Valor")
                     else: fig=None
                     if fig is not None:
                         fig.update_layout(margin=dict(l=0,r=0,t=10,b=0),legend_title_text="",height=335,
                                           paper_bgcolor="rgba(0,0,0,0)",plot_bgcolor="rgba(0,0,0,0)")
+                        fig.update_traces(texttemplate="%{text:.2f}",textposition="top center",cliponaxis=False)
                         fig.update_xaxes(categoryorder="array",categoryarray=MONTHS)
                         st.plotly_chart(fig,use_container_width=True)
                     else:
