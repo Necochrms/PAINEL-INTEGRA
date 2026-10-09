@@ -24,9 +24,10 @@ SERIES={
  ("Internação Maternidade","Média de permanência — gestantes (dias)"):[3.72,4.36,4.38,3.46,3.85,4.57,5.2,5.72],
  ("Internação Maternidade","Média de permanência — ALCON (dias)"):[3.24,3,3.09,3,3.17,3.3,3.15,3.36],
  ("Internação Maternidade","Quedas notificadas (n)"):[0,0,0,0,0,1,0,1],
- ("Clínica Cirúrgica","Taxa de ocupação (%)"):[57],
- ("Clínica Cirúrgica","Média de permanência (dias)"):[4.5],
+ ("Clínica Cirúrgica","Taxa de ocupação (%)"):[57,75,84,85,81,80.5,81,88.5],
+ ("Clínica Cirúrgica","Média de permanência (dias)"):[4.5,6.5,6.4,6.1,5.5,5.9,6.5,6.1],
  ("Clínica Cirúrgica","Quedas notificadas (n)"):[1],
+ ("CME","Processamento OPME (itens)"):[522,486,567,371,570,533,470,603],
  ("Centro Cirúrgico","Cirurgias eletivas (n)"):[60,83,89,69,57,64],
  ("Centro Cirúrgico","Cirurgias urgência/emergência (n)"):[310,286,312,309,358,334],
  ("Centro Cirúrgico","Absenteísmo de enfermeiros (%)"):[1.39,3,0.68,2.1,2,0],
@@ -45,3 +46,61 @@ COVERAGE={
  "Centro Cirúrgico":"Indicadores consolidados de janeiro a junho de 2026.",
  "CME":"Indicadores consolidados de janeiro a agosto de 2026.",
 }
+
+# Catálogo documental: indicador identificado na apresentação não significa série homologada.
+CATALOG={
+ "Internação Maternidade":[
+ ("Absenteísmo de enfermeiros (%)","Pessoas","comum"),
+ ("Absenteísmo de técnicos (%)","Pessoas","comum"),
+ ("Dimensionamento / gap de enfermagem","Pessoas","comum"),
+ ("Acidentes de trabalho","Pessoas","comum"),
+ ("Paciente-dia médio — ALCON","Assistencial","específico"),
+ ("Paciente-dia médio — Alto risco","Assistencial","específico"),
+ ("Média de permanência — gestantes (dias)","Assistencial","específico"),
+ ("Média de permanência — ALCON (dias)","Assistencial","específico"),
+ ("Quedas notificadas (n)","Segurança","comum")],
+ "Clínica Cirúrgica":[
+ ("Absenteísmo de enfermeiros (%)","Pessoas","comum"),
+ ("Absenteísmo de técnicos (%)","Pessoas","comum"),
+ ("Dimensionamento / gap de enfermagem","Pessoas","comum"),
+ ("Acidentes de trabalho","Pessoas","comum"),
+ ("Taxa de ocupação (%)","Fluxo de leitos","comum"),
+ ("Média de permanência (dias)","Fluxo de leitos","comum"),
+ ("Paciente-dia, admissões e altas","Fluxo de leitos","comum"),
+ ("Índice de intervalo de substituição","Fluxo de leitos","específico"),
+ ("Índice de renovação de leitos","Fluxo de leitos","específico"),
+ ("Quedas notificadas (n)","Segurança","comum"),
+ ("Flebite","Segurança","específico"),
+ ("Curativos realizados","Assistencial","específico"),
+ ("TRR — atendimento com presença médica","Assistencial","específico")],
+ "Centro Cirúrgico":[
+ ("Absenteísmo de enfermeiros (%)","Pessoas","comum"),
+ ("Absenteísmo de técnicos (%)","Pessoas","comum"),
+ ("Acidentes de trabalho","Pessoas","comum"),
+ ("Cirurgias eletivas (n)","Produção","específico"),
+ ("Cirurgias urgência/emergência (n)","Produção","específico"),
+ ("Cirurgias por especialidade","Produção","específico"),
+ ("Cirurgias eletivas canceladas","Produção","específico"),
+ ("Reabordagens","Segurança","específico"),
+ ("Taxa de mortalidade","Segurança","específico"),
+ ("Produtividade de enfermagem na SRPA","Produção","específico")],
+ "CME":[
+ ("Absenteísmo de enfermeiros (%)","Pessoas","comum"),
+ ("Absenteísmo de técnicos (%)","Pessoas","comum"),
+ ("Acidentes de trabalho","Pessoas","comum"),
+ ("Desinfecção (itens)","Processamento","específico"),
+ ("Esterilização em autoclave (itens)","Processamento","específico"),
+ ("Processamento terceirizado (itens)","Processamento","específico"),
+ ("Processamento OPME (itens)","Processamento","específico"),
+ ("Manutenção de equipamentos","Equipamentos","específico")],
+}
+def catalog():
+    frame=indicators()
+    rows=[]
+    for unit,items in CATALOG.items():
+        for name,group,kind in items:
+            count=len(frame[(frame["Unidade"]==unit)&(frame["Indicador"]==name)])
+            rows.append({"Unidade":unit,"Indicador":name,"Grupo":group,"Classificação":kind,
+                         "Situação":"Série disponível" if count else "Identificado no relatório; valores pendentes",
+                         "Meses disponíveis":count})
+    return pd.DataFrame(rows)
