@@ -2,7 +2,7 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-from modules.indicators import indicators, COVERAGE, MONTHS
+from modules.indicators import indicators, catalog, COVERAGE, MONTHS
 
 st.set_page_config(page_title="PAINEL INTEGRA",page_icon="🏥",layout="wide",initial_sidebar_state="expanded")
 st.markdown("""<style>
@@ -21,10 +21,12 @@ div.stButton>button[kind="primary"]{background:#087f87;border-color:#087f87;colo
 
 UNITS=list(COVERAGE)
 ALL=indicators()
+CAT=catalog()
 if "units" not in st.session_state: st.session_state.units=UNITS.copy()
 if "view" not in st.session_state: st.session_state.view="Indicadores assistenciais"
 if "chart_type" not in st.session_state: st.session_state.chart_type="Linha"
 if "period" not in st.session_state: st.session_state.period=(1,8)
+if "focus_unit" not in st.session_state: st.session_state.focus_unit=None
 
 with st.sidebar:
     st.markdown("## 🏥 PAINEL INTEGRA")
@@ -33,22 +35,25 @@ with st.sidebar:
     st.radio("Área de análise",["Indicadores assistenciais","Gestão de pessoas","Projetos e prazos","Equipamentos e riscos","Integração de processos"],key="view")
     st.divider()
     st.caption("Os valores são agregados e exigem conferência institucional.")
+    if st.button("Visão geral / comparação",use_container_width=True):
+        st.session_state.focus_unit=None
+        st.rerun()
 
 st.markdown("# PAINEL INTEGRA")
 st.caption("CENTRAL DE INTELIGÊNCIA ASSISTENCIAL  /  INDICADORES SETORIAIS 2026")
 st.markdown("#### Unidades assistenciais")
 cols=st.columns(4,gap="medium")
 for col,unit,emoji in zip(cols,UNITS,["🤱","🛏️","🏥","♻️"]):
-    n=ALL.loc[ALL["Unidade"]==unit,"Indicador"].nunique()
+    n=CAT.loc[CAT["Unidade"]==unit,"Indicador"].nunique()
     selected=unit in st.session_state.units
     with col:
         with st.container(border=True):
             st.markdown(f"### {emoji} {unit}")
             st.caption(f"{n} indicadores cadastrados")
-            if st.button("✓ Selecionada" if selected else "+ Adicionar",key="unit_"+unit,
+            if st.button("Abrir painel →",key="unit_"+unit,
                          type="primary" if selected else "secondary",use_container_width=True):
-                if selected: st.session_state.units=[u for u in st.session_state.units if u!=unit]
-                else: st.session_state.units=[u for u in UNITS if u in st.session_state.units or u==unit]
+                st.session_state.focus_unit=unit
+                st.session_state.units=[unit]
                 st.rerun()
 
 c1,c2,c3=st.columns([2,1,1])
@@ -59,7 +64,24 @@ with c2:
 with c3:
     period=st.slider("Período (jan–ago)",1,8,key="period")
 st.divider()
-
+if st.session_state.focus_unit and st.session_state.focus_unit in units and len(units)==1:
+    st.markdown("## "+st.session_state.focus_unit+" — painel da unidade")
+    current=CAT[CAT["Unidade"]==st.session_state.focus_unit]
+    for group,group_df in current.groupby("Grupo",sort=False):
+        with st.expander(group+" • "+str(len(group_df))+" indicadores",expanded=True):
+            st.dataframe(group_df[["Indicador","Classificação","Situação","Meses disponíveis"]],
+                         hide_index=True,use_container_width=True)
+elif units:
+    st.markdown("## Indicadores comuns e específicos")
+    selected_catalog=CAT[CAT["Unidade"].isin(units)]
+    common=selected_catalog[selected_catalog["Classificação"]=="comum"]
+    specific=selected_catalog[selected_catalog["Classificação"]=="específico"]
+    t1,t2=st.tabs(["Indicadores comuns","Indicadores exclusivos / setoriais"])
+    with t1:
+        st.caption("Indicadores comparáveis por tema. As definições e denominadores devem ser homologados antes da comparação entre setores.")
+        st.dataframe(common[["Unidade","Indicador","Situação"]],hide_index=True,use_container_width=True)
+    with t2:
+        st.dataframe(specific[["Unidade","Indicador","Situação"]],hide_index=True,use_container_width=True)
 if st.session_state.view in ["Indicadores assistenciais","Gestão de pessoas"]:
     if not units:
         st.info("Selecione uma ou mais unidades nos cards ou no filtro para visualizar os indicadores.")
