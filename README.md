@@ -1,35 +1,32 @@
 # PAINEL INTEGRA — Gestão Integrada Assistencial e Cirúrgica
 
-Protótipo funcional em **Python + Streamlit**, com dados 100% fictícios e filtros de período/setor, gráficos interativos, tabelas e exportação CSV.
+Dashboard Streamlit baseado em **indicadores agregados de apresentações setoriais de 2026**. Não contém dados pessoais, identificadores ou apresentações originais.
 
-## Módulos
-1. Visão executiva e indicadores
-2. Internação Maternidade — gestantes, puérperas e recém-nascidos internados (**sem Centro Obstétrico**)
-3. Clínica Cirúrgica
-4. Centro Cirúrgico
-5. Central de Material e Esterilização (CME)
-6. Gestão de pessoas, escalas, férias e absenteísmo
-7. Projetos, pendências e prazos
-8. Equipamentos, materiais e riscos
-9. Integração dos processos entre setores
+## O que funciona
+- Menu com nove áreas; visão executiva, Centro Cirúrgico, CME e absenteísmo possuem séries mensais transcritas.
+- Filtros de unidade, indicador e mês; gráficos Plotly, tabelas e exportação CSV.
+- Maternidade (somente internação) e Clínica Cirúrgica aparecem como **em conferência**, sem números inventados.
+- Projetos, equipamentos e integração são demonstrações explicitamente fictícias.
+- Dados e fontes em `modules/indicators.py`.
 
-## Publicar sem instalar Python
-1. Acesse https://share.streamlit.io/ e entre com sua conta GitHub.
-2. Clique em **Create app** / **New app**, selecione **Deploy a public app from GitHub**.
-3. Repositório: `Necochrms/PAINEL-INTEGRA`; branch: `main`; arquivo principal: `app.py`.
-4. Escolha um endereço disponível e clique em **Deploy**.
-5. Acompanhe os logs se houver falha de instalação.
+## Fontes e qualidade
+- `CME INDICADORES AGOSTO 2026(1).pptx` — desinfecção, autoclave, terceirização e absenteísmo, janeiro–agosto.
+- `INDICADOR SSECC JUNHO-GEREF 2026 NECOC.pptx` — cirurgias eletivas, urgência/emergência e absenteísmo, janeiro–junho.
+- Demais apresentações de Maternidade e Clínica Cirúrgica recebidas; extração numérica ainda pendente.
+- Os dados foram transcritos de gráficos/tabelas e **não foram homologados**; conferir divergências entre versões e definições antes de uso institucional.
+- Não há metas presumidas, dados individuais ou decisões clínicas.
 
-O Streamlit instala as dependências listadas em `requirements.txt` automaticamente na nuvem.
+## Publicação sem instalar Python
+Acesse https://share.streamlit.io/ e crie um app a partir de GitHub:
+- Repositório: `Necochrms/PAINEL-INTEGRA`
+- Branch: `main`
+- Main file path: `app.py`
 
-## Execução local (opcional)
+## Execução opcional
 ```bash
 pip install -r requirements.txt
 streamlit run app.py
 ```
 
-## Avisos
-- Todos os indicadores, nomes de equipamentos e projetos são **fictícios**.
-- Sem login, persistência, API hospitalar, banco de dados, auditoria ou controle de acesso nesta versão.
-- **Não inserir dados reais de pacientes ou colaboradores. Não usar para decisões assistenciais.**
-- Antes de produção: autenticação, autorização por perfil, LGPD, criptografia, logs, backups, testes e homologação institucional.
+## Pendente
+Conferência de indicadores de Maternidade e Clínica Cirúrgica, homologação de fórmulas e metas, testes em Cloud, autenticação, perfis, banco de dados, auditoria, integração entre setores e avaliação LGPD. **Não usar como prontuário ou ferramenta de decisão assistencial.**
